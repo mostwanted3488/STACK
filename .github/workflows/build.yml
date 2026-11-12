@@ -39,4 +39,4 @@ jobs:
         run: |
           Compress-Archive -Path dist/STACK.vst3 -DestinationPath STACK-windows-vst3.zip -Force
           gh release delete latest --yes --cleanup-tag 2>$null
-          gh release create latest STACK-windows-vst3.zip --title "STACK (Windows VST3)" --notes "Build automatique. Dezippe et copie STACK.vst3 dans C:\Program Files\Common Files\VST3"
+          gh release create latest STACK-windows-vst3.zip --title "STACK (Windows VST3)" --notes "Automatic build. Unzip and copy STACK.vst3 to C:\Program Files\Common Files\VST3"

@@ -1,16 +1,16 @@
 # STACK
 
-Plugin VST3 hote : 20 slots dans un seul slot de mixer FL Studio.
+VST3 host plugin: 20 slots inside a single FL Studio mixer slot.
 
-- Charge des VST3 en serie (les plugins natifs FL ne sont pas supportes)
-- Bypass par slot, ouverture de la fenetre de chaque plugin
-- Latence cumulee reportee au host, dry/wet global compense
-- Sauvegarde de l'etat de tous les plugins dans le projet
+- Loads VST3 plugins in series (FL Studio native plugins are not supported)
+- Per-slot bypass, opens each plugin's own window
+- Cumulative latency reported to the host, global dry/wet is latency-compensated
+- Saves the state of every hosted plugin inside the project
 
 ## Build
 
-Le workflow GitHub Actions compile le VST3 Windows a chaque push sur `main`.
-Telecharge l'artefact `STACK-windows-vst3` dans l'onglet Actions, puis copie
-`STACK.vst3` dans `C:\Program Files\Common Files\VST3`.
+The GitHub Actions workflow builds the Windows VST3 on every push to `main` and
+publishes it as the `latest` release. Copy `STACK.vst3` to
+`C:\Program Files\Common Files\VST3`.
 
-Build local : `cmake -B build -A x64 && cmake --build build --config Release`
+Local build: `cmake -B build -A x64 && cmake --build build --config Release`

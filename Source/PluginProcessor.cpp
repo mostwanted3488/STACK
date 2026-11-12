@@ -206,7 +206,7 @@ void StackProcessor::loadFromPath (int slot, const juce::String& path,
     if (found.isEmpty())
     {
         if (onError)
-            onError ("plugin introuvable ou non chargeable");
+            onError ("plugin not found or could not be loaded");
         return;
     }
 

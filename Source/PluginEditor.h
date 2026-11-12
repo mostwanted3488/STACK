@@ -68,11 +68,11 @@ private:
     juce::OwnedArray<SlotRow> rows;
     std::map<int, std::unique_ptr<PluginWindow>> windows;
     juce::StringArray paths;
-    juce::String infoText { "Touche un slot vide pour charger un plugin" };
+    juce::String infoText { "Tap an empty slot to load a plugin" };
     int selected = -1;
     int pendingSelect = -1;
 
-    juce::TextButton addButton { "Ajouter" };
+    juce::TextButton addButton { "Add" };
     juce::Slider mixSlider;
     std::unique_ptr<juce::SliderParameterAttachment> mixAttach;
     std::unique_ptr<juce::FileChooser> chooser;

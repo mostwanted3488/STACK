@@ -197,7 +197,7 @@ void SlotRow::paint (juce::Graphics& g)
     {
         g.setFont (jostFont (14.0f, 0.02f));
         g.setColour (inkA (0.32f));
-        g.drawText ("Libre", 62, 0, getWidth() - 70, h, juce::Justification::centredLeft);
+        g.drawText ("Empty", 62, 0, getWidth() - 70, h, juce::Justification::centredLeft);
     }
 }
 
@@ -242,7 +242,7 @@ StackEditor::StackEditor (StackProcessor& p)
                 return;
             }
 
-        infoText = "Les 20 slots sont pleins";
+        infoText = "All 20 slots are full";
         repaint();
     };
     addAndMakeVisible (addButton);
@@ -272,7 +272,7 @@ void StackEditor::slotsChanged()
     if (pendingSelect >= 0 && proc.hasPlugin (pendingSelect))
     {
         selected = pendingSelect;
-        infoText = proc.getSlotName (selected) + " charge";
+        infoText = proc.getSlotName (selected) + " loaded";
         pendingSelect = -1;
     }
 
@@ -337,8 +337,8 @@ void StackEditor::showLoadMenu (int slot)
     if (! groups.empty())
         menu.addSeparator();
 
-    menu.addItem (100000, "Parcourir...");
-    menu.addItem (100001, "Rescanner les dossiers VST3");
+    menu.addItem (100000, "Browse...");
+    menu.addItem (100001, "Rescan VST3 folders");
 
     juce::WeakReference<StackEditor> weak (this);
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (rows[slot]),
@@ -360,7 +360,7 @@ void StackEditor::menuResult (int slot, int result)
 
     if (result == 100000)
     {
-        chooser = std::make_unique<juce::FileChooser> ("Choisis un plugin VST3",
+        chooser = std::make_unique<juce::FileChooser> ("Choose a VST3 plugin",
                                                        juce::File ("C:\\Program Files\\Common Files\\VST3"),
                                                        "*.vst3");
         juce::WeakReference<StackEditor> weak (this);
@@ -382,7 +382,7 @@ void StackEditor::menuResult (int slot, int result)
 
 void StackEditor::loadPath (int slot, const juce::String& path)
 {
-    infoText = "Chargement de " + juce::File (path).getFileNameWithoutExtension() + "...";
+    infoText = "Loading " + juce::File (path).getFileNameWithoutExtension() + "...";
     pendingSelect = slot;
     repaint();
 
@@ -392,7 +392,7 @@ void StackEditor::loadPath (int slot, const juce::String& path)
         if (weak != nullptr)
         {
             weak->pendingSelect = -1;
-            weak->infoText = "Echec : " + err;
+            weak->infoText = "Failed: " + err;
             weak->repaint();
         }
     });
@@ -435,7 +435,7 @@ void StackEditor::paint (juce::Graphics& g)
                          : 0.0f;
     g.setColour (inkA (0.5f));
     g.setFont (jostFont (13.0f, 0.06f));
-    g.drawText (juce::String (proc.getActiveCount()) + " actifs  " + juce::String::fromUTF8 ("\xc2\xb7")
+    g.drawText (juce::String (proc.getActiveCount()) + " active  " + juce::String::fromUTF8 ("\xc2\xb7")
                     + "  " + juce::String (ms, 1) + " ms",
                 getWidth() - pad - 4 - 260, topPad, 260, headerH, juce::Justification::centredRight);
 

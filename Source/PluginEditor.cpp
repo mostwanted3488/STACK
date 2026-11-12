@@ -1,23 +1,140 @@
 #include "PluginEditor.h"
+#include "BinaryData.h"
 
 namespace
 {
-    const juce::Colour colBg      { 0xff0e0e0e };
-    const juce::Colour colRow     { 0xff171717 };
-    const juce::Colour colBorder  { 0xff262626 };
-    const juce::Colour colText    { 0xffececec };
-    const juce::Colour colMuted   { 0xff8a8a8a };
-    const juce::Colour colDim     { 0xff6d6d6d };
-    const juce::Colour colBright  { 0xfff2f2f2 };
-
-    constexpr int pad = 14;
-    constexpr int rowH = 34;
-    constexpr int rowGap = 4;
-    constexpr int colGap = 12;
-    constexpr int headerH = 34;
-    constexpr int labelH = 18;
-    constexpr int footH = 40;
+    constexpr int pad = 24;
+    constexpr int topPad = 26;
+    constexpr int headerH = 40;
+    constexpr int rowH = 36;
+    constexpr int rowGap = 8;
+    constexpr int colGap = 14;
+    constexpr int footH = 50;
     constexpr int mixH = 24;
+    constexpr int winW = 680;
+
+    const juce::Colour ink { 0xff1e2024 };
+
+    juce::Colour inkA (float a) { return ink.withAlpha (a); }
+    juce::Colour white (float a) { return juce::Colours::white.withAlpha (a); }
+
+    void drawGlass (juce::Graphics& g, juce::Rectangle<float> r, float corner, bool shadow = true)
+    {
+        juce::Path p;
+        p.addRoundedRectangle (r, corner);
+
+        if (shadow)
+            juce::DropShadow (juce::Colour::fromFloatRGBA (0.24f, 0.25f, 0.28f, 0.2f), 10, { 0, 4 }).drawForPath (g, p);
+
+        g.setGradientFill (juce::ColourGradient (white (0.62f), r.getX(), r.getY(),
+                                                 white (0.16f), r.getRight(), r.getBottom(), false));
+        g.fillPath (p);
+
+        g.saveState();
+        g.reduceClipRegion (p);
+        g.setGradientFill (juce::ColourGradient (juce::Colours::transparentBlack, 0.0f, r.getY() + r.getHeight() * 0.55f,
+                                                 juce::Colour::fromFloatRGBA (0.35f, 0.37f, 0.41f, 0.13f), 0.0f, r.getBottom(), false));
+        g.fillRect (r);
+        g.restoreState();
+
+        g.setColour (white (0.95f));
+        g.drawLine (r.getX() + corner * 0.7f, r.getY() + 1.0f, r.getRight() - corner * 0.7f, r.getY() + 1.0f, 1.0f);
+
+        g.setColour (white (0.78f));
+        g.drawRoundedRectangle (r.reduced (0.5f), corner, 1.0f);
+    }
+
+    void drawOrb (juce::Graphics& g, juce::Point<float> c, float radius, bool lit)
+    {
+        auto e = juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (c);
+
+        if (lit)
+        {
+            g.setGradientFill (juce::ColourGradient (white (0.95f), c.x, c.y, white (0.0f), c.x + radius * 2.6f, c.y, true));
+            g.fillEllipse (e.expanded (radius * 1.6f));
+
+            g.setGradientFill (juce::ColourGradient (juce::Colours::white, c.x - radius * 0.3f, c.y - radius * 0.4f,
+                                                     juce::Colour (0xffc4c8cf), c.x + radius, c.y + radius, true));
+            g.fillEllipse (e);
+            g.setColour (juce::Colours::white);
+            g.drawEllipse (e, 1.0f);
+        }
+        else
+        {
+            g.setColour (white (0.45f));
+            g.fillEllipse (e);
+            g.setColour (white (0.95f));
+            g.drawEllipse (e, 1.0f);
+        }
+    }
+}
+
+juce::Font jostFont (float height, float kerning)
+{
+    static juce::Typeface::Ptr face = juce::Typeface::createSystemTypefaceFor (BinaryData::Jost_ttf,
+                                                                              (size_t) BinaryData::Jost_ttfSize);
+    juce::Font f = face != nullptr ? juce::Font (juce::FontOptions (face).withHeight (height))
+                                   : juce::Font (juce::FontOptions (height));
+    return kerning != 0.0f ? f.withExtraKerningFactor (kerning) : f;
+}
+
+// ------------------------------------------------------- StackLookAndFeel
+
+void StackLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int width, int height, float sliderPos,
+                                         float, float, juce::Slider::SliderStyle, juce::Slider&)
+{
+    auto track = juce::Rectangle<float> ((float) x, (float) y + (float) height * 0.5f - 4.0f, (float) width, 8.0f);
+
+    g.setColour (white (0.5f));
+    g.fillRoundedRectangle (track, 4.0f);
+    g.setColour (juce::Colour::fromFloatRGBA (0.24f, 0.25f, 0.28f, 0.22f));
+    g.drawLine (track.getX() + 3.0f, track.getY() + 1.5f, track.getRight() - 3.0f, track.getY() + 1.5f, 1.0f);
+    g.setColour (white (0.9f));
+    g.drawRoundedRectangle (track.reduced (0.5f), 4.0f, 1.0f);
+
+    const float r = 11.0f;
+    juce::Point<float> c (juce::jlimit ((float) x + r, (float) (x + width) - r, sliderPos), track.getCentreY());
+    auto e = juce::Rectangle<float> (r * 2.0f, r * 2.0f).withCentre (c);
+
+    juce::Path p;
+    p.addEllipse (e);
+    juce::DropShadow (juce::Colour::fromFloatRGBA (0.24f, 0.25f, 0.28f, 0.4f), 8, { 0, 3 }).drawForPath (g, p);
+
+    g.setGradientFill (juce::ColourGradient (juce::Colours::white, c.x - 4.0f, c.y - 5.0f,
+                                             juce::Colour (0xffd9dce1), c.x + r, c.y + r, true));
+    g.fillEllipse (e);
+    g.setColour (juce::Colours::white);
+    g.drawEllipse (e, 1.0f);
+}
+
+void StackLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& b, const juce::Colour&,
+                                             bool highlighted, bool down)
+{
+    auto r = b.getLocalBounds().toFloat().reduced (4.0f);
+    if (down)
+        r = r.reduced (0.5f);
+
+    juce::Path p;
+    p.addRoundedRectangle (r, r.getHeight() * 0.5f);
+    juce::DropShadow (juce::Colour::fromFloatRGBA (0.24f, 0.25f, 0.28f, 0.24f), 8, { 0, 3 }).drawForPath (g, p);
+
+    g.setGradientFill (juce::ColourGradient (white (highlighted ? 1.0f : 0.95f), r.getX(), r.getY(),
+                                             white (highlighted ? 0.75f : 0.5f), r.getRight(), r.getBottom(), false));
+    g.fillPath (p);
+    g.setColour (juce::Colours::white);
+    g.drawRoundedRectangle (r.reduced (0.5f), r.getHeight() * 0.5f, 1.0f);
+}
+
+void StackLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& b, bool, bool)
+{
+    g.setFont (jostFont (13.0f, 0.06f));
+    g.setColour (inkA (0.85f));
+    g.drawText (b.getButtonText(), b.getLocalBounds(), juce::Justification::centred);
+}
+
+juce::Font StackLookAndFeel::getLabelFont (juce::Label&)
+{
+    return jostFont (12.0f, 0.04f);
 }
 
 // ------------------------------------------------------------ PluginWindow
@@ -55,55 +172,32 @@ void PluginWindow::closeButtonPressed()
 
 void SlotRow::paint (juce::Graphics& g)
 {
-    auto b = getLocalBounds().toFloat().reduced (0.5f);
+    const int h = getHeight();
     const bool has = proc.hasPlugin (index);
     const bool on = has && ! proc.isBypassed (index);
 
-    if (has)
-    {
-        g.setColour (colRow);
-        g.fillRoundedRectangle (b, 6.0f);
-        g.setColour (colBorder);
-        g.drawRoundedRectangle (b, 6.0f, 1.0f);
-    }
-    else
-    {
-        juce::Path p, dashed;
-        p.addRoundedRectangle (b, 6.0f);
-        const float dashes[] = { 3.0f, 3.0f };
-        juce::PathStrokeType (1.0f).createDashedStroke (dashed, p, dashes, 2);
-        g.setColour (juce::Colour (0xff3a3a3a));
-        g.fillPath (dashed);
-    }
-
-    const int h = getHeight();
-
-    g.setFont (juce::Font (juce::FontOptions (11.0f)));
-    g.setColour (colDim);
-    g.drawText (juce::String (index + 1), 4, 0, 18, h, juce::Justification::centredRight);
+    g.setFont (jostFont (11.0f));
+    g.setColour (inkA (0.35f));
+    g.drawText (juce::String (index + 1), 10, 0, 20, h, juce::Justification::centredRight);
 
     if (has)
     {
-        auto led = juce::Rectangle<float> (30.0f, (float) h * 0.5f - 5.0f, 10.0f, 10.0f);
-        g.setColour (on ? colBright : juce::Colour (0xff2c2c2c));
-        g.fillEllipse (led);
-        g.setColour (on ? colBright : juce::Colour (0xff4a4a4a));
-        g.drawEllipse (led, 1.0f);
+        drawOrb (g, { 44.0f, (float) h * 0.5f }, 6.0f, on);
 
-        g.setFont (juce::Font (juce::FontOptions (13.0f)));
-        g.setColour (on ? colText : colDim);
-        g.drawText (proc.getSlotName (index), 48, 0, getWidth() - 48 - 28, h,
+        g.setFont (jostFont (14.0f, 0.02f));
+        g.setColour (on ? inkA (0.85f) : inkA (0.35f));
+        g.drawText (proc.getSlotName (index), 62, 0, getWidth() - 62 - 34, h,
                     juce::Justification::centredLeft, true);
 
-        g.setFont (juce::Font (juce::FontOptions (14.0f)));
-        g.setColour (colDim);
-        g.drawText ("x", getWidth() - 26, 0, 20, h, juce::Justification::centred);
+        g.setFont (jostFont (18.0f));
+        g.setColour (inkA (0.3f));
+        g.drawText (juce::String::fromUTF8 ("\xc3\x97"), getWidth() - 32, 0, 22, h, juce::Justification::centred);
     }
     else
     {
-        g.setFont (juce::Font (juce::FontOptions (13.0f)));
-        g.setColour (juce::Colour (0xff5c5c5c));
-        g.drawText ("Vide", 48, 0, getWidth() - 56, h, juce::Justification::centredLeft);
+        g.setFont (jostFont (14.0f, 0.02f));
+        g.setColour (inkA (0.32f));
+        g.drawText ("Libre", 62, 0, getWidth() - 70, h, juce::Justification::centredLeft);
     }
 }
 
@@ -116,9 +210,9 @@ void SlotRow::mouseDown (const juce::MouseEvent& e)
         return;
     }
 
-    if (e.x >= getWidth() - 28)
+    if (e.x >= getWidth() - 36)
         proc.removePlugin (index);
-    else if (e.x >= 24 && e.x <= 46)
+    else if (e.x >= 30 && e.x <= 58)
         proc.setBypassed (index, ! proc.isBypassed (index));
     else if (onOpen)
         onOpen (index);
@@ -129,6 +223,8 @@ void SlotRow::mouseDown (const juce::MouseEvent& e)
 StackEditor::StackEditor (StackProcessor& p)
     : juce::AudioProcessorEditor (&p), proc (p)
 {
+    setLookAndFeel (&laf);
+
     for (int i = 0; i < StackProcessor::numSlots; ++i)
     {
         auto* r = rows.add (new SlotRow (proc, i));
@@ -137,8 +233,6 @@ StackEditor::StackEditor (StackProcessor& p)
         addAndMakeVisible (r);
     }
 
-    addButton.setColour (juce::TextButton::buttonColourId, colBright);
-    addButton.setColour (juce::TextButton::textColourOffId, colBg);
     addButton.onClick = [this]
     {
         for (int i = 0; i < StackProcessor::numSlots; ++i)
@@ -148,28 +242,20 @@ StackEditor::StackEditor (StackProcessor& p)
                 return;
             }
 
-        infoText = "Les 20 slots sont pleins.";
+        infoText = "Les 20 slots sont pleins";
         repaint();
     };
     addAndMakeVisible (addButton);
 
     mixSlider.setSliderStyle (juce::Slider::LinearHorizontal);
-    mixSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 52, 20);
-    mixSlider.setColour (juce::Slider::trackColourId, juce::Colour (0xffbdbdbd));
-    mixSlider.setColour (juce::Slider::backgroundColourId, juce::Colour (0xff2a2a2a));
-    mixSlider.setColour (juce::Slider::thumbColourId, colBright);
-    mixSlider.setColour (juce::Slider::textBoxTextColourId, colMuted);
+    mixSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 56, 20);
+    mixSlider.setColour (juce::Slider::textBoxTextColourId, inkA (0.5f));
     mixSlider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     addAndMakeVisible (mixSlider);
     mixAttach = std::make_unique<juce::SliderParameterAttachment> (*proc.mixParam, mixSlider, nullptr);
 
-    mixLabel.setColour (juce::Label::textColourId, colMuted);
-    mixLabel.setFont (juce::Font (juce::FontOptions (12.0f)));
-    addAndMakeVisible (mixLabel);
-
-    const int w = pad * 2 + 2 * 320 + colGap;
-    const int h = pad + headerH + labelH + 10 * (rowH + rowGap) + 6 + footH + 6 + mixH + pad;
-    setSize (w, h);
+    const int h = topPad + headerH + 10 * (rowH + rowGap) + 2 + footH + 16 + mixH + 22;
+    setSize (winW, h);
 
     proc.addListener (this);
 }
@@ -178,10 +264,21 @@ StackEditor::~StackEditor()
 {
     proc.removeListener (this);
     windows.clear();
+    setLookAndFeel (nullptr);
 }
 
 void StackEditor::slotsChanged()
 {
+    if (pendingSelect >= 0 && proc.hasPlugin (pendingSelect))
+    {
+        selected = pendingSelect;
+        infoText = proc.getSlotName (selected) + " charge";
+        pendingSelect = -1;
+    }
+
+    if (selected >= 0 && ! proc.hasPlugin (selected))
+        selected = -1;
+
     repaint();
 }
 
@@ -196,7 +293,8 @@ void StackEditor::openSlotEditor (int slot)
     if (plugin == nullptr)
         return;
 
-    infoText = "Slot " + juce::String (slot + 1) + " : " + proc.getSlotName (slot);
+    selected = slot;
+    infoText = "Slot " + juce::String (slot + 1) + "  /  " + proc.getSlotName (slot);
     repaint();
 
     auto it = windows.find (slot);
@@ -285,6 +383,7 @@ void StackEditor::menuResult (int slot, int result)
 void StackEditor::loadPath (int slot, const juce::String& path)
 {
     infoText = "Chargement de " + juce::File (path).getFileNameWithoutExtension() + "...";
+    pendingSelect = slot;
     repaint();
 
     juce::WeakReference<StackEditor> weak (this);
@@ -292,59 +391,101 @@ void StackEditor::loadPath (int slot, const juce::String& path)
     {
         if (weak != nullptr)
         {
+            weak->pendingSelect = -1;
             weak->infoText = "Echec : " + err;
             weak->repaint();
         }
     });
 }
 
+juce::Rectangle<int> StackEditor::getFooterBounds() const
+{
+    const int y = topPad + headerH + 10 * (rowH + rowGap) + 2;
+    return { pad, y, getWidth() - pad * 2, footH };
+}
+
 void StackEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (colBg);
+    const float w = (float) getWidth();
+    const float h = (float) getHeight();
 
-    g.setColour (colBright);
-    g.setFont (juce::Font (juce::FontOptions (20.0f, juce::Font::bold)).withExtraKerningFactor (0.2f));
-    g.drawText ("STACK", pad, pad, 110, headerH, juce::Justification::centredLeft);
+    // argent brosse
+    juce::ColourGradient bg (juce::Colour (0xfff4f5f7), 0.0f, 0.0f, juce::Colour (0xffb7bbc2), w, h, false);
+    bg.addColour (0.38, juce::Colour (0xffc9ccd2));
+    bg.addColour (0.62, juce::Colour (0xffeceef1));
+    g.setGradientFill (bg);
+    g.fillAll();
 
-    g.setColour (colDim);
-    g.setFont (juce::Font (juce::FontOptions (11.0f)).withExtraKerningFactor (0.12f));
-    g.drawText ("20 SLOTS DANS 1", pad + 112, pad, 200, headerH, juce::Justification::centredLeft);
+    auto blob = [&g] (float cx, float cy, float r, juce::Colour c)
+    {
+        g.setGradientFill (juce::ColourGradient (c, cx, cy, c.withAlpha (0.0f), cx + r, cy, true));
+        g.fillEllipse (cx - r, cy - r, r * 2.0f, r * 2.0f);
+    };
+    blob (60.0f, 70.0f, 230.0f, white (0.85f));
+    blob (w - 20.0f, h * 0.45f, 190.0f, juce::Colour::fromFloatRGBA (0.47f, 0.49f, 0.53f, 0.32f));
+    blob (w * 0.5f, h + 10.0f, 260.0f, white (0.7f));
+
+    // en-tete
+    g.setColour (inkA (0.8f));
+    g.setFont (jostFont (20.0f, 0.42f));
+    g.drawText ("STACK", pad + 4, topPad, 200, headerH, juce::Justification::centredLeft);
 
     const float ms = proc.getSampleRate() > 0.0
                          ? (float) proc.getTotalLatencySamples() * 1000.0f / (float) proc.getSampleRate()
                          : 0.0f;
-    g.setColour (colMuted);
-    g.setFont (juce::Font (juce::FontOptions (12.0f)));
-    g.drawText ("Actifs " + juce::String (proc.getActiveCount()) + "   Latence " + juce::String (ms, 1) + " ms",
-                getWidth() - pad - 260, pad, 260, headerH, juce::Justification::centredRight);
+    g.setColour (inkA (0.5f));
+    g.setFont (jostFont (13.0f, 0.06f));
+    g.drawText (juce::String (proc.getActiveCount()) + " actifs  " + juce::String::fromUTF8 ("\xc2\xb7")
+                    + "  " + juce::String (ms, 1) + " ms",
+                getWidth() - pad - 4 - 260, topPad, 260, headerH, juce::Justification::centredRight);
 
-    const int colW = (getWidth() - pad * 2 - colGap) / 2;
-    g.setColour (colDim);
-    g.setFont (juce::Font (juce::FontOptions (11.0f)).withExtraKerningFactor (0.12f));
-    g.drawText ("SLOTS 1 A 10", pad, pad + headerH, colW, labelH, juce::Justification::centredLeft);
-    g.drawText ("SLOTS 11 A 20", pad + colW + colGap, pad + headerH, colW, labelH, juce::Justification::centredLeft);
+    // slots
+    for (int i = 0; i < rows.size(); ++i)
+    {
+        auto r = rows[i]->getBounds().toFloat();
+        const float corner = r.getHeight() * 0.5f;
 
-    auto foot = getFooterBounds();
-    g.setColour (colRow);
-    g.fillRoundedRectangle (foot.toFloat(), 6.0f);
-    g.setColour (colBorder);
-    g.drawRoundedRectangle (foot.toFloat().reduced (0.5f), 6.0f, 1.0f);
+        if (proc.hasPlugin (i))
+        {
+            drawGlass (g, r, corner);
 
-    g.setColour (colMuted);
-    g.setFont (juce::Font (juce::FontOptions (12.0f)));
-    g.drawText (infoText, foot.reduced (12, 0).withTrimmedRight (150), juce::Justification::centredLeft, true);
-}
+            if (i == selected)
+            {
+                g.setColour (white (0.6f));
+                g.drawRoundedRectangle (r.expanded (2.0f), corner + 2.0f, 3.0f);
+            }
+        }
+        else
+        {
+            juce::Path p, dashed;
+            p.addRoundedRectangle (r.reduced (0.5f), corner);
+            g.setColour (white (0.12f));
+            g.fillPath (p);
+            const float dashes[] = { 4.0f, 3.0f };
+            juce::PathStrokeType (1.0f).createDashedStroke (dashed, p, dashes, 2);
+            g.setColour (white (0.9f));
+            g.fillPath (dashed);
+        }
+    }
 
-juce::Rectangle<int> StackEditor::getFooterBounds() const
-{
-    const int y = pad + headerH + labelH + 10 * (rowH + rowGap) + 6;
-    return { pad, y, getWidth() - pad * 2, footH };
+    // pied
+    auto foot = getFooterBounds().toFloat();
+    drawGlass (g, foot, foot.getHeight() * 0.5f);
+
+    g.setColour (inkA (0.55f));
+    g.setFont (jostFont (13.0f, 0.03f));
+    g.drawText (infoText, getFooterBounds().withTrimmedLeft (22).withTrimmedRight (176),
+                juce::Justification::centredLeft, true);
+
+    g.setColour (inkA (0.5f));
+    g.setFont (jostFont (12.0f, 0.1f));
+    g.drawText ("DRY / WET", pad + 6, foot.getBottom() + 16, 100, mixH, juce::Justification::centredLeft);
 }
 
 void StackEditor::resized()
 {
     const int colW = (getWidth() - pad * 2 - colGap) / 2;
-    const int top = pad + headerH + labelH;
+    const int top = topPad + headerH;
 
     for (int i = 0; i < rows.size(); ++i)
     {
@@ -354,9 +495,8 @@ void StackEditor::resized()
     }
 
     auto foot = getFooterBounds();
-    addButton.setBounds (foot.getRight() - 12 - 130, foot.getY() + 8, 130, foot.getHeight() - 16);
+    addButton.setBounds (foot.getRight() - 10 - 158, foot.getCentreY() - 21, 158, 42);
 
-    const int my = foot.getBottom() + 6;
-    mixLabel.setBounds (pad, my, 120, mixH);
-    mixSlider.setBounds (pad + 124, my, getWidth() - pad * 2 - 124, mixH);
+    const int my = foot.getBottom() + 16;
+    mixSlider.setBounds (pad + 6 + 100, my, getWidth() - pad * 2 - 6 - 100 - 6, mixH);
 }

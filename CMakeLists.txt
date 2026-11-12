@@ -27,6 +27,19 @@ juce_add_plugin(STACK
     VST3_CATEGORIES Fx
     COPY_PLUGIN_AFTER_BUILD FALSE)
 
+set(JOST_TTF "${CMAKE_BINARY_DIR}/fonts/Jost.ttf")
+if(NOT EXISTS "${JOST_TTF}")
+    file(DOWNLOAD "https://github.com/google/fonts/raw/main/ofl/jost/Jost%5Bwght%5D.ttf" "${JOST_TTF}"
+         STATUS JOST_STATUS TLS_VERIFY ON)
+    list(GET JOST_STATUS 0 JOST_CODE)
+    file(SIZE "${JOST_TTF}" JOST_SIZE)
+    if(NOT JOST_CODE EQUAL 0 OR JOST_SIZE LESS 20000)
+        file(REMOVE "${JOST_TTF}")
+        message(FATAL_ERROR "Telechargement de la police Jost impossible: ${JOST_STATUS}")
+    endif()
+endif()
+juce_add_binary_data(StackAssets SOURCES "${JOST_TTF}")
+
 target_sources(STACK PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp)
@@ -40,6 +53,7 @@ target_compile_definitions(STACK PUBLIC
 
 target_link_libraries(STACK
     PRIVATE
+        StackAssets
         juce::juce_audio_utils
         juce::juce_audio_processors
         juce::juce_dsp

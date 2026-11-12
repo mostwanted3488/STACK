@@ -3,6 +3,20 @@
 #include "PluginProcessor.h"
 #include <map>
 
+juce::Font jostFont (float height, float kerning = 0.0f);
+
+class StackLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    void drawLinearSlider (juce::Graphics&, int x, int y, int width, int height, float sliderPos,
+                           float minSliderPos, float maxSliderPos, juce::Slider::SliderStyle,
+                           juce::Slider&) override;
+    void drawButtonBackground (juce::Graphics&, juce::Button&, const juce::Colour&,
+                               bool highlighted, bool down) override;
+    void drawButtonText (juce::Graphics&, juce::TextButton&, bool highlighted, bool down) override;
+    juce::Font getLabelFont (juce::Label&) override;
+};
+
 class PluginWindow : public juce::DocumentWindow
 {
 public:
@@ -49,15 +63,17 @@ private:
     juce::Rectangle<int> getFooterBounds() const;
 
     StackProcessor& proc;
+    StackLookAndFeel laf;
 
     juce::OwnedArray<SlotRow> rows;
     std::map<int, std::unique_ptr<PluginWindow>> windows;
     juce::StringArray paths;
-    juce::String infoText { "Clique un slot vide pour charger un plugin VST3." };
+    juce::String infoText { "Touche un slot vide pour charger un plugin" };
+    int selected = -1;
+    int pendingSelect = -1;
 
-    juce::TextButton addButton { "Ajouter un plugin" };
+    juce::TextButton addButton { "Ajouter" };
     juce::Slider mixSlider;
-    juce::Label mixLabel { {}, "Dry / Wet global" };
     std::unique_ptr<juce::SliderParameterAttachment> mixAttach;
     std::unique_ptr<juce::FileChooser> chooser;
 
